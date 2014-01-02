@@ -13,10 +13,8 @@ class SplayTree:
         p = n.p
         if p.p: p.p.c[p == p.p.c[1]] = n
         right = n == p.c[1]
-        assert(p.c[right] == n)
         p.p, n.p, p.c[right], n.c[1-right] = n, p.p, n.c[1-right], p
         if p.c[right] != None: p.c[right].p = p
-        assert(all(m.c[i] == None or [m.c[i].k <= m.k, m.c[i].k >= m.k][i] for i in (0,1) for m in (n,p)))
     def zigzig(self, n):
         self.zig(n.p)
         self.zig(n)
@@ -39,7 +37,6 @@ class SplayTree:
     def split(self, key):
         n = self.access(key)
         if n == None: return None, None
-        # if n.k == key: raise KeyError
         right = n.k < key
         t, n.c[right] = n.c[right], None
         if right: return n, t
@@ -55,25 +52,24 @@ class SplayTree:
             l.c[1] = r
             r.p = l
 
-    def insert(self, key):
+    def add(self, key):
         n = self.Node(key)
         n.c[0], n.c[1] = self.split(key)
         for i in range(2):
             if n.c[i] != None: n.c[i].p = n
         self.root = n
-    def delete(self, key):
+    def remove(self, key):
         n = self.access(key)
         if n and n.k == key:
             for i in range(2):
                 if n.c[i]: n.c[i].p = None
             self.join(n.c[0], n.c[1])
-        #else: raise KeyError
+        else: raise KeyError
     def __contains__(self, key):
         n = self.access(key)
         return n and n.k == key
-
-    def __init__(self, root = None):
-        self.root = root
+    def __init__(self):
+        self.root = None
 
 class RBTree:
     class Node:
@@ -96,22 +92,12 @@ class RBTree:
         return n
     def sibling(self, n):
         return n.p.c[n != n.p.c[1]]
-    def check(self):
-        assert(not self.root or self.root.b)
-        def sub(n):
-            if not n: return 0
-            if not n.b: assert(all([not n.c[i] or n.c[i].b for i in [0,1]]))
-            l, r = sub(n.c[0]), sub(n.c[1])
-            assert(l==r)
-            return l + n.b
-        sub(self.root)
-        return True
     
-    def insert(self, key):
-        p = self.access(key)
+    def add(self, key):
+        p = self.root
         if p == None: self.root = self.Node(key)
-        elif p.k == key: raise KeyError
         else:
+            while p.c[p.k < key]: p = p.c[p.k < key]
             n = self.Node(key, False)
             p.c[p.k < n.k], n.p = n, p
             while n.p and not n.p.b:
@@ -126,8 +112,7 @@ class RBTree:
                     p.b, p.p.b = True, False
                     self.rotate(p)
             if not n.p: n.b = True
-        assert(self.check())
-    def delete(self, key):
+    def remove(self, key):
         n = self.access(key)
         if not n or n.k != key: raise KeyError
         if n.c[0] and n.c[1]:
@@ -153,9 +138,7 @@ class RBTree:
                     w.b, n.p.b, w.c[1-right].b = n.p.b, True, True
                     n = self.root
             n.b = True
-            assert(not self.sibling(d) or not self.sibling(d).b)
             d.p.c[d == d.p.c[1]] = None
-        assert(self.check())
     def __contains__(self, key):
         n = self.access(key)
         return n and n.k == key
@@ -163,14 +146,59 @@ class RBTree:
         self.root = None
 
 
-if __name__ == "__main__":
-    t = SplayTree()
-    for i in range(0,30,2): t.insert(i)
-    for i in range(100,7,-3): t.insert(i)
-    for i in range(20,60): t.delete(i)
-    #t = RBTree()
-    #for i in range(0,100,2): t.insert(i)
-    #for i in range(60,6,-2): t.delete(i)
-    for i in range(100):
-        print("%s in tree: %s" %(i, i in t))
-    
+###############################################################################
+# Testing
+def tree_test():
+    from random import randint
+    def rbcheck(self):
+        assert(not self.root or self.root.b)
+        def sub(n):
+            if not n: return 0
+            if not n.b: assert(all([not n.c[i] or n.c[i].b for i in [0,1]]))
+            l, r = sub(n.c[0]), sub(n.c[1])
+            assert(l==r)
+            return l + n.b
+        sub(self.root)
+    def test_TreeAsSet(t):
+        s = set()
+        for i in range(100000):
+            x = randint(1,10000)
+            assert (x in t) == (x in s)
+            if x in t:
+                t.remove(x)
+                s.remove(x)
+            else:
+                t.add(x)
+                s.add(x)
+        print("Test Tree-as-Set passed");
+    def test_RBTree():
+        t = RBTree()
+        for i in range(10000):
+            x = randint(1,1000)
+            if x in t:
+                t.remove(x)
+                rbcheck(t)
+            else:
+                t.add(x)
+                rbcheck(t)
+        print("Test RBTree passed");
+    def test_TreeAsMultiset():
+        t = RBTree()
+        s = SplayTree()
+        for i in range(10000):
+            x = randint(1,100)
+            assert (x in t) == (x in s)
+            if x in t and randint(0,10) > 6:
+                t.remove(x)
+                s.remove(x)
+            else:
+                t.add(x)
+                s.add(x)
+            rbcheck(t)
+        print("Test Tree-as-MultySet passed");
+    test_TreeAsSet(SplayTree())
+    test_TreeAsSet(RBTree())
+    test_RBTree()
+    test_TreeAsMultiset()
+
+if __name__ == "__main__": tree_test()

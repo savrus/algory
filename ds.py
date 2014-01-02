@@ -52,7 +52,7 @@ class FibHeap:
         def abandon(self, child):
             self.deg -= 1
             child.parent = None
-            self.child = child.bros.next
+            self.child = child.bros.next.data
             if child.nobros(): self.child = None
             else: child.bros.detach()
     def consolidate(self):
@@ -66,9 +66,10 @@ class FibHeap:
                 if y.key < x.key: x,y = y,x
                 x.adopt(y)
                 auxput(x)
-        for n in self.root.bros:
-            n.data.parent = None
-            auxput(n.data)
+        for l in self.root.bros:
+            l.data.parent = None
+            l.data.mark = False
+            auxput(l.data)
         for i in range(last+1):
             if self.aux[i] != None:
                 if self.aux[i].key < self.root.key: self.root = self.aux[i]
@@ -96,7 +97,7 @@ class FibHeap:
         n.key = key
         if n.parent and n.key < n.parent.key: self.cascade(n)
         if n.key < self.root.key: self.root = n
-    def delete(self, n):
+    def remove(self, n):
         assert(self.goodnode(n))
         if n.parent: self.cascade(n)
         if n.child != None: n.bros.join(n.child.bros)
@@ -106,7 +107,7 @@ class FibHeap:
             n.bros.detach()
             self.consolidate()
     def extract_min(self):
-        self.delete(self.root)
+        self.remove(self.root)
     def empty(self):
         return self.root == None
     def minkey(self):
@@ -121,22 +122,34 @@ class FibHeap:
         self.aux = glist()
 
 
-
-
-if __name__ == "__main__":
-    l = [i for i in range(10)]
-    import random
-    random.shuffle(l)
-    print(l)
-    f = FibHeap()
-    k = None
-    for i in l: k = f.insert(i)
-    #k = f.insert(-2)
-    f.extract_min()
-    f.insert(-2)
-    f.decrease_key(k, -1)
-    l = []
-    while not f.empty():
-        l.append(f.minkey())
-        f.extract_min()
-    print(l)
+###############################################################################
+# Testing
+def ds_test():
+    from random import randint
+    def test_FibHeap():
+        f = FibHeap()
+        l = []
+        N = 100000
+        for i in range(N):
+            k = randint(1,1000)
+            l.append([k, None])
+            l[-1][1] = f.insert(k)
+        d = 0
+        for x in range(N):
+            i = randint(0,N-1)
+            if l[i][0] == 0: continue
+            l[i][0] = randint(0,l[i][0]-1)
+            if l[i][0] == 0:
+                f.remove(l[i][1])
+                d += 1
+            else: f.decrease_key(*reversed(l[i]))
+        l = sorted([x[0] for x in l if x[0] > 0])
+        h = []
+        while not f.empty():
+            h.append(f.minkey())
+            f.extract_min()
+        assert l == h
+        print("Test FibHeap passed (%d removals)" %d)
+    test_FibHeap()
+    
+if __name__ == "__main__": ds_test()
