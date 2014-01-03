@@ -167,9 +167,9 @@ class SplayTree(SplayTreeBase):
     def min(self):
         return self.slide(self.root, 0) if self.root else None
     def successor(self, k):
-        return self.smthessor(k, 1)
+        return self.smthessor(k, 1) if self.root else None
     def predecessor(self, k):
-        return self.smthessor(k, 0)
+        return self.smthessor(k, 0) if self.root else None
     def __iter__(self):
         def r(n):
             if n == None: raise StopIteration
@@ -198,9 +198,9 @@ class RBTree(RBTreeBase):
     def min(self):
         return self.slide(self.root, 0) if self.root else None
     def successor(self, k):
-        return self.smthessor(k, 1)
+        return self.smthessor(k, 1) if self.root else None
     def predecessor(self, k):
-        return self.smthessor(k, 0)
+        return self.smthessor(k, 0) if self.root else None
     def __iter__(self):
         def r(n):
             if n == None: raise StopIteration
