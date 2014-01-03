@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-# Copyright (c) 2013, savrus
+# Copyright (c) 2013-2014, savrus
 #
 
 class SplayTreeBase:
@@ -156,8 +156,8 @@ class SplayTree(SplayTreeBase):
         if not n.c[side]: return None
         n = n.c[side]
         r = n.k if n.k != k else None
-        while (n.c[side], n.c[1-side])[n.k != k]:
-            n = (n.c[side], n.c[1-side])[n.k != k]
+        while n.c[1-side if n.k != k else side]:
+            n = n.c[1-side if n.k != k else side]
             if n.k != k: r = n.k
         self.splay(n)
         return r
@@ -188,7 +188,7 @@ class RBTree(RBTreeBase):
         m, r = n.c[side], None
         while m:
             if m.k != k: r = m.k
-            m = (m.c[side], m.c[1-side])[m.k != k]
+            m = m.c[1-side if m.k != k else side]
         if r != None: return r
         while n.p and n == n.p.c[side]: n = n.p
         return n.p.k if n.p else None
