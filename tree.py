@@ -3,7 +3,7 @@
 # Copyright (c) 2013, savrus
 #
 
-class SplayTree:
+class SplayTreeBase:
     class Node:
         def __init__(self, key):
             self.p = None
@@ -71,7 +71,7 @@ class SplayTree:
     def __init__(self):
         self.root = None
 
-class RBTree:
+class RBTreeBase:
     class Node:
         def __init__(self, key, black = True):
             self.p = None
@@ -145,6 +145,70 @@ class RBTree:
     def __init__(self):
         self.root = None
 
+class SplayTree(SplayTreeBase):
+    def slide(self, n, side):
+        while n.c[side]: n = n.c[side]
+        self.splay(n)
+        return n.k
+    def smthessor(self, k, side):
+        n = self.access(k)
+        if (n.k < k, n.k > k)[side]: return n.k
+        if not n.c[side]: return None
+        n = n.c[side]
+        r = n.k if n.k != k else None
+        while (n.c[side], n.c[1-side])[n.k != k]:
+            n = (n.c[side], n.c[1-side])[n.k != k]
+            if n.k != k: r = n.k
+        self.splay(n)
+        return r
+
+    def max(self):
+        return self.slide(self.root, 1) if self.root else None
+    def min(self):
+        return self.slide(self.root, 0) if self.root else None
+    def successor(self, k):
+        return self.smthessor(k, 1)
+    def predecessor(self, k):
+        return self.smthessor(k, 0)
+    def __iter__(self):
+        def r(n):
+            if n == None: raise StopIteration
+            for x in r(n.c[0]): yield x
+            yield n
+            for x in r(n.c[1]): yield x
+        for x in r(self.root): yield x
+
+class RBTree(RBTreeBase):
+    def slide(self, n, side):
+        while n.c[side]: n = n.c[side]
+        return n.k
+    def smthessor(self, k, side):
+        n = self.access(k)
+        if (n.k < k, n.k > k)[side]: return n.k
+        m, r = n.c[side], None
+        while m:
+            if m.k != k: r = m.k
+            m = (m.c[side], m.c[1-side])[m.k != k]
+        if r != None: return r
+        while n.p and n == n.p.c[side]: n = n.p
+        return n.p.k if n.p else None
+
+    def max(self):
+        return self.slide(self.root, 1) if self.root else None
+    def min(self):
+        return self.slide(self.root, 0) if self.root else None
+    def successor(self, k):
+        return self.smthessor(k, 1)
+    def predecessor(self, k):
+        return self.smthessor(k, 0)
+    def __iter__(self):
+        def r(n):
+            if n == None: raise StopIteration
+            for x in r(n.c[0]): yield x
+            yield n
+            for x in r(n.c[1]): yield x
+        for x in r(self.root): yield x
+
 
 ###############################################################################
 # Testing
@@ -170,7 +234,7 @@ def tree_test():
             else:
                 t.add(x)
                 s.add(x)
-        print("Test Tree-as-Set passed");
+        print("Test Tree-as-Set for %s passed" % t.__class__.__name__);
     def test_RBTree():
         t = RBTree()
         for i in range(10000):
@@ -196,9 +260,36 @@ def tree_test():
                 s.add(x)
             rbcheck(t)
         print("Test Tree-as-MultySet passed");
+    def test_PredSucc(t):
+        s = set()
+        for i in range(10000):
+            x = randint(1,100000)
+            assert (x in t) == (x in s)
+            t.add(x)
+            s.add(x)
+        assert t.max() == max(s)
+        assert t.min() == min(s)
+        for i in range(100000):
+            x = randint(0,100001)
+            assert (t.successor(x) == None and x >= max(s)) or (t.successor(x) == min((y for y in s if y > x)))
+            assert (t.predecessor(x) == None and x <= min(s)) or (t.predecessor(x) == max((y for y in s if y < x)))
+        print("Test PredSucc for %s passed" % t.__class__.__name__)
+    def test_Iteration(t):
+        l = []
+        for i in range(10000):
+            x = randint(1,100000)
+            t.add(x)
+            l.append(x)
+        ll = [x.k for x in t]
+        assert ll == sorted(l)
+        print("Test Iteration for %s passed" % t.__class__.__name__)
     test_TreeAsSet(SplayTree())
     test_TreeAsSet(RBTree())
     test_RBTree()
     test_TreeAsMultiset()
+    test_Iteration(RBTree())
+    test_Iteration(SplayTree())
+    test_PredSucc(RBTree())
+    test_PredSucc(SplayTree())
 
 if __name__ == "__main__": tree_test()
