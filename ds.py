@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-# Copyright (c) 2013, savrus
+# Copyright (c) 2013-2014, savrus
 #
 
 class dllist():
@@ -20,20 +20,18 @@ class dllist():
             n = n.next
             yield n.prev
         yield n
-    def __str__(self):
-        return "{self:%s next:%s prev:%s data:%s}" % (repr(self), repr(self.next), repr(self.prev), repr(self.data))
     
 class glist(list):
     # expanding list
     def __setitem__(self, index, value):
         if index >= len(self): self.extend([None]*(index+1-len(self)))
-        list.__setitem__(self,index,value)
+        super().__setitem__(index,value)
     def __getitem__(self, index):
         if index >= len(self): return None
-        return list.__getitem__(self,index)
+        return super().__getitem__(index)
 
 class FibHeap:
-    class Node():
+    class _Node():
         def __init__(self, key):
             self.key = key 
             self.parent = None
@@ -55,26 +53,21 @@ class FibHeap:
             self.child = child.bros.next.data
             if child.nobros(): self.child = None
             else: child.bros.detach()
-    def consolidate(self):
-        last = 0
-        def auxput(x):
-            nonlocal last
-            last = max(last, x.deg)
-            if self.aux[x.deg] == None: self.aux[x.deg] = x
-            else:
-                y, self.aux[x.deg] = self.aux[x.deg], None
-                if y.key < x.key: x,y = y,x
-                x.adopt(y)
-                auxput(x)
-        for l in self.root.bros:
-            l.data.parent = None
-            l.data.mark = False
-            auxput(l.data)
-        for i in range(last+1):
-            if self.aux[i] != None:
-                if self.aux[i].key < self.root.key: self.root = self.aux[i]
-                self.aux[i] = None
-    def cascade(self, n):
+    def _consolidate(self):
+        for x in (l.data for l in self.root.bros):
+            x.parent = None
+            x.mark = False
+            while x:
+                if self.aux[x.deg] == None: self.aux[x.deg], x = x, None
+                else:
+                    y, self.aux[x.deg] = self.aux[x.deg], None
+                    if y.key < x.key: x,y = y,x
+                    self.root = x
+                    x.adopt(y)
+        for x in (l.data for l in self.root.bros):
+            self.aux[x.deg] = None
+            if x.key < self.root.key: self.root = x
+    def _cascade(self, n):
         while True:
             p = n.parent
             p.abandon(n)
@@ -83,8 +76,11 @@ class FibHeap:
             n = p
             if not n.mark: break
         if n.parent: n.mark = True
-    def goodnode(self, n):
+    def _goodnode(self, n):
         return n.parent or not n.nobros() or n == self.root
+    def __init__(self):
+        self.root = None
+        self.aux = glist()
 
     def union(self, fibheap):
         if self.root and fibheap.root:
@@ -93,33 +89,27 @@ class FibHeap:
         elif fibheap.root: self.root = fibheap.root
         fibheap.root = None
     def decrease_key(self, n, key):
-        assert(self.goodnode(n) and key <= n.key)
+        assert(self._goodnode(n) and key <= n.key)
         n.key = key
-        if n.parent and n.key < n.parent.key: self.cascade(n)
+        if n.parent and n.key < n.parent.key: self._cascade(n)
         if n.key < self.root.key: self.root = n
     def remove(self, n):
-        assert(self.goodnode(n))
-        if n.parent: self.cascade(n)
+        assert(self._goodnode(n))
+        if n.parent: self._cascade(n)
         if n.child != None: n.bros.join(n.child.bros)
         if n.nobros(): self.root = None
         else:
             if self.root == n: self.root = n.bros.next.data
             n.bros.detach()
-            self.consolidate()
-    def extract_min(self):
-        self.remove(self.root)
-    def empty(self):
-        return self.root == None
-    def minkey(self):
-        return self.root.key
+            self._consolidate()
     def insert(self, key):
-        n = self.Node(key)
+        n = self._Node(key)
         if self.root: self.root.bros.join(n.bros)
         if self.root == None or key < self.root.key: self.root = n
         return n
-    def __init__(self):
-        self.root = None
-        self.aux = glist()
+    def extract_min(self): self.remove(self.root)
+    def empty(self): return self.root == None
+    def minkey(self): return self.root.key
 
 
 ###############################################################################
