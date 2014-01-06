@@ -1,8 +1,7 @@
 #!/usr/bin/python3
 #
-# Copyright (c) 2013, savrus
+# Copyright (c) 2013-2014, savrus
 #
-import sys
 
 def ZFunction(s):
     z = [len(s)] if len(s) > 0 else []
