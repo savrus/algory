@@ -209,6 +209,86 @@ class RBTree(RBTreeBase):
             for x in r(n.c[1]): yield x
         for x in r(self.root): yield x
 
+class _vanEmdeBoarsNode:
+    def __init__(self, l):
+        self._u = 1 << l
+        self._l = l
+        self._m = [None,None]
+        self._s = None
+        self._cluster = dict()
+    def _check(self, x): assert 0 <= x < self._u
+    def _high(self, x): return x >> (self._l//2)
+    def _low(self, x): return x & ((1 << (self._l//2))-1)
+    def _index(self, x, y): return (x << (self._l//2)) + y
+    def _c(self,x): return self._cluster.get(self._high(x), None)
+    def _smthecessor(self, x, side):
+        self._check(x)
+        if self._u == 2: return side if x == 1-side and self._m[side] == side else None
+        elif self.min() != None and (x < self._m[0] if side else x > self._m[1]): return self._m[1-side]
+        else:
+            m = self._c(x)._m[side] if self._c(x) else None
+            if m != None and (self._low(x) < m if side else self._low(x) > m):
+                return self._index(self._high(x), self._c(x)._smthecessor(self._low(x), side))
+            else:
+                sc = self._s._smthecessor(self._high(x), side) if self._s else None
+                if sc == None:
+                    if side == 0 and self.min() != None and x > self.min(): return self.min()
+                    return None
+                return self._index(sc, self._cluster[sc]._m[1-side])
+
+    def min(self): return self._m[0]
+    def max(self): return self._m[1]
+    def __contains__(self,x):
+        self._check(x)
+        if x in self._m: return True
+        if self._u == 2: return False
+        return self._low(x) in self._c(x) if self._c(x) else False
+    def successor(self, x): return self._smthecessor(x, 1)
+    def predecessor(self, x): return self._smthecessor(x, 0)
+    def add(self,x):
+        self._check(x)
+        if x in self._m: raise KeyError
+        if self.min() == None: self._m[0] = self._m[1] = x
+        else:
+            if x < self.min(): self._m[0], x = x, self._m[0]
+            if self._u > 2:
+                if not self._c(x): self._cluster[self._high(x)] = _vanEmdeBoarsNode(self._l//2)
+                if not self._s: self._s = _vanEmdeBoarsNode(self._l - self._l//2)
+                if self._c(x).min() == None: self._s.add(self._high(x))
+                self._c(x).add(self._low(x))
+            if x > self.max(): self._m[1] = x
+    def remove(self, x):
+        self._check(x)
+        if self._m[0] == self._m[1]:
+            if x != self._m[0]: raise KeyError
+            self._m[0] = self._m[1] = None
+        elif self._u == 2:
+            if x not in self._m: raise KeyError
+            self._m[0] = self._m[1] = 1 if x == 0 else 0
+        else:
+            if x == self.min():
+                sc = self._s.min()
+                x = self._index(sc, self._cluster[sc].min())
+                self._m[0] = x
+            self._c(x).remove(self._low(x))
+            if self._c(x).min() == None:
+                self._cluster.pop(self._high(x))
+                self._s.remove(self._high(x))
+                if x == self.max():
+                    sm = self._s.max()
+                    if sm == None:
+                        self._m[1] = self._m[0]
+                        self._s = None
+                    else: self._m[1] = self._index(m, self._cluster[sm].max())
+            elif x == self.max():
+                self._m[1] = self._index(self._high(x), self._c(x).max())
+    def __str__(self):
+        return "u:%s l:%s m:%s s:(%s) c:[%s]" % (self._u, self._l, self._m, self._s, ",\n".join([str(n) for n in self.c]) if self.c else None)
+
+class vanEmdeBoarsTree(_vanEmdeBoarsNode):
+    def __init__(self,universe):
+        super().__init__((lambda a:lambda v:a(a,v))(lambda s,x:1 if x<=2 else 1+s(s,x//2+x%2))(universe))
+
 
 ###############################################################################
 # Testing
@@ -274,6 +354,30 @@ def tree_test():
             assert (t.successor(x) == None and x >= max(s)) or (t.successor(x) == min((y for y in s if y > x)))
             assert (t.predecessor(x) == None and x <= min(s)) or (t.predecessor(x) == max((y for y in s if y < x)))
         print("Test PredSucc for %s passed" % t.__class__.__name__)
+    def test_vanEmdeBoarsTree():
+        def step(t,N):
+            rb = RBTree()
+            for i in range(N//2):
+                x = randint(1,N-1)
+                assert (x in t) == (x in rb)
+                if x not in t:
+                    t.add(x)
+                    rb.add(x)
+                assert x in t
+            assert t.max() == rb.max() and t.min() == rb.min()
+            for x in range(N):
+                assert t.successor(x) == rb.successor(x)
+                assert t.predecessor(x) == rb.predecessor(x)
+            for x in range(N):
+                if x in t:
+                    t.remove(x)
+                    assert x not in t
+        N = 100000
+        t = vanEmdeBoarsTree(N)
+        step(t,N)
+        assert not t._s and len(t._cluster) == 0
+        step(t,N)
+        print("Test vanEmdeBoarsTree passed")
     def test_Iteration(t):
         l = []
         for i in range(10000):
@@ -291,5 +395,6 @@ def tree_test():
     test_Iteration(SplayTree())
     test_PredSucc(RBTree())
     test_PredSucc(SplayTree())
+    test_vanEmdeBoarsTree()
 
 if __name__ == "__main__": tree_test()
