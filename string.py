@@ -4,14 +4,6 @@
 #
 import sys
 
-def ZFunctionSlow(s):
-    z = []
-    for i in range(0,len(s)):
-        l = 0
-        while i+l < len(s) and s[l] == s[i+l]: l += 1
-        z.append(l)
-    return z
-
 def ZFunction(s):
     z = [len(s)] if len(s) > 0 else []
     last = 0
@@ -25,15 +17,6 @@ def ZFunction(s):
             last = i + t
         z.append(t)
     return z
-
-def PrefixFunctionSlow(s):
-    p = [0] if len(s) > 0 else []
-    for i in range(1, len(s)):
-        l = 0
-        for t in range(0,i):
-            if s[0:t+1] == s[i-t:i+1]: l = t+1
-        p.append(l)
-    return p
 
 def PrefixFunction(s):
     p = [0] if len(s) > 0 else []
@@ -67,28 +50,6 @@ def PrefixFunction2ZFunction(p):
             last = i + t
         z.append(t)
     return z
-
-def StringGenerator(length, alphabet):
-    s = [0]*length
-    while 1:
-        yield "".join([alphabet[x] for x in s])
-        p = length - 1
-        while p >= 0 and s[p] == len(alphabet) - 1:
-            s[p] = 0
-            p -= 1
-        if p == -1: return
-        s[p] += 1
-
-A = "abcdefghijklmnopqrstuvwxyz"
-
-def test_ZFunction_PrefixFunction():
-    for l in range(0,7):
-        for s in StringGenerator(l, A[0:l]):
-            print(s)
-            assert(PrefixFunctionSlow(s) == PrefixFunction(s))
-            assert(ZFunctionSlow(s) == ZFunction(s))
-            assert(ZFunction2PrefixFunction(ZFunction(s)) == PrefixFunction(s))
-            assert(ZFunction(s) == PrefixFunction2ZFunction(PrefixFunction(s)))
 
 class SuffixTree:
     # Nodes are of class Node. Node.out is a dict which contains outgoing edges. Keys are first characters.
@@ -140,7 +101,7 @@ class SuffixTree:
                 while self.skip > 0 and edge == None:
                     edge = self.node.out[self.s[k]]
                     if edge[1] != None and edge[1]-edge[0] <= self.skip:
-                        assert(self.s[edge[0]:edge[1]] == self.s[k:k+edge[1]-edge[0]])
+                        #assert(self.s[edge[0]:edge[1]] == self.s[k:k+edge[1]-edge[0]])
                         self.skip -= edge[1]-edge[0]
                         k += edge[1]-edge[0]
                         self.node = edge[2]
@@ -193,8 +154,10 @@ class SuffixTree:
             if string[i] not in n.out.keys(): return False
             e = n.out[string[i]]
             eend = e[1] if e[1] != None else len(self.s)
-            if string[i:i + eend-e[0]] != self.s[e[0]:eend]: return False
+            #if string[i:i + eend-e[0]] != self.s[e[0]:eend]: return False
+            if not self.s.startswith(string[i:i + eend-e[0]], e[0], eend): return False
             i += eend-e[0]
+            n = e[2]
         return e == None or e[1] == None
     # Iterate over all strings in the tree
     def __iter__(self):
@@ -249,31 +212,63 @@ class SuffixTree:
         return s
     def __str__(self): return self.string(None)
 
-def SuffixArraySlow(s):
-    suff = []
-    for i in range(len(s)):
-        suff.append(s[i:])
-    sa = []
-    for i in sorted(suff):
-        sa.append(len(s) - len(i))
-    return sa
+def _string_test():
+    import random
+    A = "abcdefghijklmnopqrstuvwxyz"
+    def StringGenerator(length, alphabet):
+        s = [0]*length
+        while 1:
+            yield "".join([alphabet[x] for x in s])
+            p = length - 1
+            while p >= 0 and s[p] == len(alphabet) - 1:
+                s[p] = 0
+                p -= 1
+            if p == -1: return
+            s[p] += 1
+    def ZFunctionSlow(s):
+        z = []
+        for i in range(0,len(s)):
+            l = 0
+            while i+l < len(s) and s[l] == s[i+l]: l += 1
+            z.append(l)
+        return z
+    def PrefixFunctionSlow(s):
+        p = [0] if len(s) > 0 else []
+        for i in range(1, len(s)):
+            l = 0
+            for t in range(0,i):
+                if s[0:t+1] == s[i-t:i+1]: l = t+1
+            p.append(l)
+        return p
+    def test_ZFunction_PrefixFunction():
+        for l in range(0,7):
+            for s in StringGenerator(l, A[0:l]):
+                assert(PrefixFunctionSlow(s) == PrefixFunction(s))
+                assert(ZFunctionSlow(s) == ZFunction(s))
+                assert(ZFunction2PrefixFunction(ZFunction(s)) == PrefixFunction(s))
+                assert(ZFunction(s) == PrefixFunction2ZFunction(PrefixFunction(s)))
+        print("Test ZFunction_PrefixFunction Passed")
+    def SuffixArraySlow(s):
+        suff = []
+        for i in range(len(s)):
+            suff.append(s[i:])
+        sa = []
+        for i in sorted(suff):
+            sa.append(len(s) - len(i))
+        return sa
+    def test_SuffixTree():
+        assert "aba" not in SuffixTree("aabba")
+        line =  "".join([A[random.randrange(len(A))] for i in range(100000)])
+        t = SuffixTree(line)
+        for i in range(len(line)): assert line[i:] in t
+        for s in t: assert line.endswith(s)
+        print("Test Suffix Tree Passed")
+    def test_SuffixArray():
+        line =  "".join([A[random.randrange(len(A))] for i in range(100000)])
+        assert(SuffixArraySlow(line) == SuffixTree(line).SA())
+        print("Test Suffix Array Passed")
+    test_ZFunction_PrefixFunction()
+    test_SuffixTree()
+    test_SuffixArray()
 
-
-def test_SuffixTree(line):
-    t = SuffixTree(line)
-    #print(t)
-    for i in range(len(line)): assert line[i:] in t
-    for s in t: assert line.endswith(s)
-    print("Suffix Tree Test Passed")
-
-def test_SuffixArray(line):
-    assert(SuffixArraySlow(line) == SuffixTree(line).SA())
-    print("Suffix Array Test Passed")
-
-
-if __name__ == "__main__":
-    for line in sys.argv[1:]:
-        line = line.strip()
-        #print("Tree for \"%s\"\n" %line )
-        test_SuffixTree(line)
-        test_SuffixArray(line)
+if __name__ == "__main__": _string_test()
