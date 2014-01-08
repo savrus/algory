@@ -287,7 +287,7 @@ class _vanEmdeBoarsNode:
 
 class vanEmdeBoarsTree(_vanEmdeBoarsNode):
     def __init__(self,universe):
-        super().__init__((lambda a:lambda v:a(a,v))(lambda s,x:1 if x<=2 else 1+s(s,x//2+x%2))(universe))
+        super().__init__(1 if universe <= 1 else 1 + (lambda a:lambda v,l:a(a,v,l))(lambda s,x,l: 0 if not l else l+s(s,x>>l,l) if x>>l else s(s,x,l>>1))(universe,(lambda a:lambda v,l:a(a,v,l))(lambda s,x,l: l if (x >> (l<<1)) == 0 else s(s,x,l<<1))(universe,1)))
 
 
 ###############################################################################
