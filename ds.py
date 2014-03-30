@@ -111,6 +111,24 @@ class FibHeap:
     def empty(self): return self.root == None
     def minkey(self): return self.root.key
 
+class RMQ:
+    def __init__(self, elemets):
+        n=1
+        while n < len(elemets): n*=2
+        self.d = [0]*n + elemets + [None]*(n - len(elemets))
+        for i in range(n-1,0,-1): self.d[i] = min(self.d[2*i],self.d[2*i+1]) if self.d[2*i+1] != None else self.d[2*i]
+    def query(self, l, r):
+        assert 0 <= l < r < len(self.d)//2
+        l += len(self.d)//2
+        r += len(self.d)//2
+        def recursive(i,n):
+            if n == 0: return self.d[i]
+            if (2*i+1)*n >= r: return recursive(2*i,n//2)
+            if (2*i)*n + n-1 < l: return recursive(2*i+1,n//2)
+            if (2*i)*n >= l and (2*i+2)*n - 1 < r: return self.d[i]
+            return min(recursive(2*i,n//2), recursive(2*i+1,n//2))
+        return recursive(1,len(self.d)//4)
+
 
 ###############################################################################
 # Testing
@@ -140,6 +158,16 @@ def ds_test():
             f.extract_min()
         assert l == h
         print("Test FibHeap passed (%d removals)" %d)
+    def test_RMQ():
+        N=10000
+        l = []
+        for i in range(N): l.append(randint(1,10000))
+        rmq = RMQ(l)
+        for i in range(100000):
+            x = randint(0,len(l)-1)
+            y = randint(x+1, len(l))
+            assert rmq.query(x,y) == min(l[x:y])
     test_FibHeap()
+    test_RMQ()
     
 if __name__ == "__main__": ds_test()
