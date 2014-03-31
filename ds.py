@@ -127,7 +127,9 @@ class RMQ:
             if (2*i)*n + n-1 < l: return recursive(2*i+1,n//2)
             if (2*i)*n >= l and (2*i+2)*n - 1 < r: return self.d[i]
             return min(recursive(2*i,n//2), recursive(2*i+1,n//2))
-        return recursive(1,len(self.d)//4)
+        s, x, n = l, l ^ (r-1), 1
+        while x != 0: s//=2; x>>=1; n*=2
+        return recursive(s,n//2)
 
 
 ###############################################################################
