@@ -64,6 +64,44 @@ class CartesianTreeNode:
         for right in (0,1):
             for i in traverse(n.c[right],right): yield i
 
+class KDTree:
+    class _Node:
+        def __init__(self, pivot, children, point=None, data=None):
+            self.pivot = pivot
+            self.c = children
+            self.point = point
+            self.data = data
+    def _u(self):
+        self._unique += 1
+        return self._unique
+    # k is dimension, l is list of (point, data), point is list of coordinates
+    def __init__(self, k, l):
+        self._unique = 0
+        self.k = k
+        def recursive(s,i):
+            pivot = s[i][(len(s[i])-1)//2][0][i]
+            if len(s[i]) == 1: return self._Node(pivot, None, s[i][0][0], s[i][0][1])
+            l = [[p for p in s[j] if p[0][i] <= pivot ] for j in range(k)]
+            r = [[p for p in s[j] if p[0][i] >  pivot ] for j in range(k)]
+            return self._Node(pivot, [recursive(l, (i+1) % k), recursive(r, (i+1) % k)])
+        l = [([(x,self._u()) for x in p[0]], p[1]) for p in l]
+        s = [sorted(list(l), key = lambda p: p[0][i]) for i in range(k)]
+        self.low = [s[i][0][0][i][0] for i in range(k)]
+        self.up = [s[i][-1][0][i][0] for i in range(k)]
+        self.root = recursive(s, 0)
+    # low, up are list of bounds per coordinates
+    def query(self, low, up):
+        def recursive(n,low,up,i):
+            if n.c == None:
+                if all((low[i] <= n.point[i] <= up[i] for i in range(self.k))): yield n.data
+            else:
+                if low[i] <= n.pivot:
+                    for x in recursive(n.c[0],low,up, (i+1) % self.k): yield x
+                if up[i] >= n.pivot:
+                    for x in recursive(n.c[1],low,up, (i+1) % self.k): yield x
+        low = [(low[i] if low[i] is not None else self.low[i],0) for i in range(self.k)]
+        up = [(up[i] if up[i] is not None else self.up[i],self._unique) for i in range(self.k)]
+        for x in recursive(self.root,low,up,0): yield x
 
 ###############################################################################
 # Testing
@@ -94,7 +132,21 @@ def geometry_test():
                     print("query %s %s %s %s\n res1: %s\n res2: %s\n res3: %s" % (x1,x2,y1,y2,sorted(res1),sorted(res2),sorted(res3)))
                 assert sorted(res1) == sorted(res2) == sorted(res3)
         print("Test Cartesian1 passed")
+    def test_KDTree():
+        def S(a,b): return a if a is not None else b
+        N = 10000
+        k = 20
+        l = [[randint(0,1000) for i in range(k)] for j in range(N)]
+        kd = KDTree(k, [(p,p) for p in l])
+        for jj in range(1000):
+            low = [randint(0,999) for i in range(k)]
+            up = [randint(low[i], 1000) for i in range(k)]
+            low[0] = None
+            up[-1] = None
+            r1 = [x for x in l if all([S(low[i],-1) <= x[i] <= S(up[i],10000) for i in range(k)])]
+            r2 = [x for x in kd.query(low, up)]
+            assert sorted(r1) == sorted(r2)
     test_Cartesian1()
-
+    test_KDTree()
 
 if __name__ == "__main__": geometry_test()
