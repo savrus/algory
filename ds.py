@@ -7,19 +7,15 @@ class dllist():
     # Circular doubly linked list.
     # Iterator supports removal of current node (e.g. for i in list: i.detach())
     def __init__(self, data = None):
-        self.next = self
-        self.prev = self
-        self.data = data
+        self.next, self.prev, self.data = self, self, data
     def join(self, n):
         self.next.prev, self.next, n.prev.next, n.prev = n.prev, n, self.next, self
     def detach(self):
         self.prev.next, self.next.prev, self.prev, self.next = self.next, self.prev, self, self
     def __iter__(self):
         n = self.next
-        while n != self:
-            n = n.next
-            yield n.prev
-        yield n
+        while n != self: n = n.next; yield n.prev.data
+        yield n.data
     
 class glist(list):
     # expanding list
@@ -54,7 +50,7 @@ class FibHeap:
             if child.nobros(): self.child = None
             else: child.bros.detach()
     def _consolidate(self):
-        for x in (l.data for l in self.root.bros):
+        for x in self.root.bros:
             x.parent = None
             x.mark = False
             while x:
@@ -64,7 +60,7 @@ class FibHeap:
                     if y.key < x.key: x,y = y,x
                     self.root = x
                     x.adopt(y)
-        for x in (l.data for l in self.root.bros):
+        for x in self.root.bros:
             self.aux[x.deg] = None
             if x.key < self.root.key: self.root = x
     def _cascade(self, n):
@@ -134,7 +130,7 @@ class RMQ:
 
 ###############################################################################
 # Testing
-def ds_test():
+def _ds_test():
     from random import randint
     def test_FibHeap():
         f = FibHeap()
@@ -169,7 +165,8 @@ def ds_test():
             x = randint(0,len(l)-1)
             y = randint(x+1, len(l))
             assert rmq.query(x,y) == min(l[x:y])
+        print("Test RMQ passed")
     test_FibHeap()
     test_RMQ()
     
-if __name__ == "__main__": ds_test()
+if __name__ == "__main__": _ds_test()
