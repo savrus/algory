@@ -127,6 +127,28 @@ class RMQ:
         while x != 0: s//=2; x>>=1; n*=2
         return recursive(s,n//2)
 
+class Fenwick:
+    # invariant: d[k] stores sum over indices (k&(k-1)+1)..k
+    def __init__(self, n):
+        self.n = n
+        self.d = [0]*n
+    def query(self, k):
+        r = self.d[k]
+        while k > 0: k &= k-1; r += self.d[k]
+        return r
+    def add(self, k, v):
+        if k == 0: self.d[k] += v
+        else:
+            while k < self.n: self.d[k] += v; k += k & -k
+    def apply(self, f):
+        for i in range(self.n): v = self[i]; self.add(i, f(v) - v)
+    def __getitem__(self, k):
+        if k == 0: return self.d[k]
+        r, l = self.d[k], k-1
+        while l != (k & (k-1)): r -= self.d[l]; l &= l-1
+        return r
+    def __setitem__(self, k, v):
+        self.add(k, v - self[k])
 
 ###############################################################################
 # Testing
@@ -166,7 +188,28 @@ def _ds_test():
             y = randint(x+1, len(l))
             assert rmq.query(x,y) == min(l[x:y])
         print("Test RMQ passed")
+    def test_Fenwick():
+        def verify(f,l):
+            for j in range(len(l)):
+                assert f[j] == l[j] and f.query(j) == sum(l[0:j+1])
+        N = 10000
+        n = randint(500,1000)
+        l = [0]*n
+        f = Fenwick(n)
+        for i in range(N):
+            x = randint(0,n-1)
+            y = randint(1,100)
+            l[x] += y
+            f.add(x,y)
+            verify(f, l)
+            f[x] = l[x] = y
+            verify(f,l)
+            for j in range(len(l)): l[j] //= 2
+            f.apply(lambda x: x//2)
+            verify(f,l)
+        print("Test Fenwick passed")
     test_FibHeap()
     test_RMQ()
-    
+    test_Fenwick()
+
 if __name__ == "__main__": _ds_test()
