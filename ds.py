@@ -150,6 +150,24 @@ class Fenwick:
     def __setitem__(self, k, v):
         self.update(k, v - self[k])
 
+class FenwickMitrichev:
+    def __init__(self, n):
+        self.n = n
+        self.mf = Fenwick(n)
+        self.af = Fenwick(n)
+    def query(self, k):
+        return self.af.query(k) + self.mf.query(k) * (k+1)
+    def update(self, l, r, v):
+        self.mf.update(l, v)
+        self.af.update(l, -v*l)
+        if r+1 < self.n:
+            self.mf.update(r+1, -v)
+            self.af.update(r+1, v*(r+1))
+    def __getitem__(self, k):
+        return self.query(k) - (self.query(k-1) if k > 0 else 0)
+    def __setitem__(self, k, v):
+        self.update(k, k, v - self[k])
+
 ###############################################################################
 # Testing
 def _ds_test():
@@ -208,8 +226,27 @@ def _ds_test():
             f.apply(lambda x: x//2)
             verify(f,l)
         print("Test Fenwick passed")
+    def test_FenwickMitrichev():
+        def verify(f,l):
+            for j in range(len(l)):
+                assert f[j] == l[j] and f.query(j) == sum(l[0:j+1])
+        N = 10000
+        n = randint(500,1000)
+        l = [0]*n
+        f = FenwickMitrichev(n)
+        for i in range(N):
+            x = randint(0,n-2)
+            y = randint(x,n-1)
+            z = randint(1,100)
+            for j in range(x,y+1): l[j] += z
+            f.update(x,y,z)
+            verify(f,l)
+            f[x] = l[x] = z
+            verify(f,l)
+        print("Test FenwickMitrichev passed")
     test_FibHeap()
     test_RMQ()
     test_Fenwick()
+    test_FenwickMitrichev()
 
 if __name__ == "__main__": _ds_test()
