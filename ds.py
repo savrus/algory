@@ -136,19 +136,19 @@ class Fenwick:
         r = self.d[k]
         while k > 0: k &= k-1; r += self.d[k]
         return r
-    def add(self, k, v):
+    def update(self, k, v):
         if k == 0: self.d[k] += v
         else:
             while k < self.n: self.d[k] += v; k += k & -k
     def apply(self, f):
-        for i in range(self.n): v = self[i]; self.add(i, f(v) - v)
+        for i in range(self.n): v = self[i]; self.update(i, f(v) - v)
     def __getitem__(self, k):
         if k == 0: return self.d[k]
         r, l = self.d[k], k-1
         while l != (k & (k-1)): r -= self.d[l]; l &= l-1
         return r
     def __setitem__(self, k, v):
-        self.add(k, v - self[k])
+        self.update(k, v - self[k])
 
 ###############################################################################
 # Testing
@@ -200,7 +200,7 @@ def _ds_test():
             x = randint(0,n-1)
             y = randint(1,100)
             l[x] += y
-            f.add(x,y)
+            f.update(x,y)
             verify(f, l)
             f[x] = l[x] = y
             verify(f,l)
